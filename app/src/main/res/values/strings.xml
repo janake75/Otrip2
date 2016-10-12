@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">GPS Trip</string>
+    <string name="Start">0</string>
+    <string name="Start2">0</string>
+    <string name="distance">Felmarginal </string>
+    <string name="fragment">plats </string>
+    <string name="gps_stopped">GPS Stopped </string>
+
+</resources>
