@@ -1,81 +1,109 @@
 package com.example.janakeblomqvist.otrip;
 
-import java.util.ArrayList;
-import java.io.FileOutputStream;
-import java.io.File;
-import android.location.Location;
-import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
+import android.app.FragmentManager;
+import android.content.Context;
+import android.graphics.Color;
+import android.location.Criteria;
 import android.location.GpsSatellite;
 import android.location.GpsStatus;
 import android.location.GpsStatus.Listener;
 import android.location.GpsStatus.NmeaListener;
+import android.location.Location;
 import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Bundle;
+import android.os.SystemClock;
+import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.location.LocationManager;
 import android.widget.Button;
-import android.widget.TableRow;
-import android.widget.TextView;
-import android.graphics.Color;
-import android.location.Criteria;
-import android.content.Context;
-import android.util.Log;
-import android.widget.TextClock;  // Required to create an digital clock
+import android.widget.CheckBox;
 import android.widget.Chronometer;
-import android.os.SystemClock;
-import android.hardware.Sensor;
-import android.app.FragmentManager;
-import android.hardware.SensorEvent;
+import android.widget.ImageView;
+import android.widget.TableRow;
+import android.widget.TextClock;
+import android.widget.TextView;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.util.ArrayList;
 //import android.hardware.SensorEventListener;
 //import android.hardware.SensorManager;
 
 public class MainActivity extends AppCompatActivity implements LocationListener, OnClickListener, Listener, NmeaListener {
 
     File tracking;
-
+    private Compass compass;
     LocationManager mLocationManager;
-//    TextView location;
     TextView margin;
     TextView sats;
     TextView nmea;
-    TextView kurs1;
-    TextView kurs2;
+    TextView tvHeading;
     Button counter1;
     Button counter2;
-    Location mCurrentLocation;
-    String mLocationProvider;
-    int counter = 0;
-    int upd;
-    Location mStartPoint1 = new Location("");
-    Location mStartPoint2 = new Location("");
-    FileOutputStream outputStream;
+    Button rallytrip;
+
+    CheckBox fixed;
     Chronometer mChronometer;
     TextClock digital;
     TableRow row;
     TableRow row2;
+    TableRow rallyview;
     TableRow row3;
+
+    String mLocationProvider;
+    int counter = 0;
+    int upd;
+    float mTripDistance = 0.0f;
+    Location mCurrentLocation;
+    Location mStartPoint1 = new Location("");
+    Location mStartPoint2 = new Location("");
+    Location mTripPosition = new Location("");
+    FileOutputStream outputStream;
     SavedFragment where;
     int nmeaLines = 0;
     boolean showNmea = false;
     boolean stopped= true;
+
+    // define the display assembly compass picture
+    private ImageView image;
+
+    // record the compass picture angle turned
+    private float currentDegree = 0f;
+
+    float[] mGravity = null;
+    float[] mGeomagnetic = null;
+    float[] mRotationMatrixA = new float[16];
+    float[] mRotationMatrixB = new float[16];
+    HeadingFilter headings = new HeadingFilter();
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         margin = (TextView) findViewById(R.id.textView1);
         nmea = (TextView) findViewById(R.id.textView3);
-        kurs1 = (TextView) findViewById(R.id.textView6);
-        kurs2 = (TextView) findViewById(R.id.textView7);
+        //       compass = (ImageView) findViewById(R.id.imageViewCompass);
+        tvHeading = (TextView) findViewById(R.id.tvHeading);
         sats = (TextView) findViewById(R.id.textView2);
         counter1 = (Button) findViewById(R.id.button1);
         counter2 = (Button) findViewById(R.id.Button01);
+        rallytrip = (Button) findViewById(R.id.rallytrip);
         row = (TableRow) findViewById(R.id.row);
         row2 = (TableRow) findViewById(R.id.row2);
         row3 = (TableRow) findViewById(R.id.row3);
+        rallyview = (TableRow) findViewById(R.id.rallytripvew);
+        fixed = (CheckBox) findViewById(R.id.Fixed);
         digital = (TextClock) findViewById(R.id.textClock);
         digital.setFormat24Hour ("HH:mm:ss");
+        mTripDistance = 0.0f;
+        mTripPosition = null;
 
+        compass = new Compass(this);
+        compass.arrowView = (ImageView) findViewById(R.id.imageViewCompass);
 
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
@@ -88,13 +116,19 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         counter1.setOnClickListener(this);
         counter2.setOnClickListener(this);
+        rallytrip.setOnClickListener(this);
+
+        rallytrip.setTextColor(Color.BLUE);
+        /*
+        {
         counter1.setBackgroundColor(Color.BLACK);
-        kurs1.setBackgroundColor(Color.BLACK);
-        kurs2.setBackgroundColor(Color.BLACK);
         counter2.setBackgroundColor(Color.BLACK);
+        rallytrip.setBackgroundColor(Color.BLACK);
+        tvHeading.setBackgroundColor(Color.BLACK);
+        compass.setBackgroundColor(Color.BLACK);
         counter1.setTextColor(Color.GRAY);
-        kurs1.setTextColor(Color.GRAY);
-        kurs2.setTextColor(Color.GRAY);
+        rallytrip.setTextColor(Color.BLUE);
+        tvHeading.setTextColor(Color.GRAY);
         counter2.setTextColor(Color.GRAY);
         mChronometer.setBackgroundColor(Color.BLACK);
         mChronometer.setTextColor(Color.GRAY);
@@ -103,6 +137,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         row.setBackgroundColor(Color.BLACK);
         row2.setBackgroundColor(Color.BLACK);
         row3.setBackgroundColor(Color.BLACK);
+        rallyview.setBackgroundColor(Color.BLACK);
         digital.setBackgroundColor(Color.BLACK);
         digital.setTextColor(Color.GREEN);
         mChronometer.setTextColor(Color.GRAY);
@@ -111,12 +146,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         margin.setTextColor(Color.GRAY);
         sats.setBackgroundColor(Color.BLACK);
         sats.setTextColor(Color.GRAY);
+        }
+     */
 
-        // TextView that will tell the user what degree is he heading
- //       tvHeading = (TextView) findViewById(R.id.textView2);
-
-        // initialize your android device sensor capabilities
- //       mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
         if ( mLocationProvider != null){
 
@@ -126,24 +158,42 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         mLocationManager.addGpsStatusListener(this);
         mLocationManager.addNmeaListener(this);
+
+        fixed.setChecked(false);
         //NmeaListener
 
         // find the retained fragment on activity restarts
         FragmentManager fm = getFragmentManager();
-        where = (SavedFragment) fm.findFragmentByTag("plats");
 
+        where = (SavedFragment) fm.findFragmentByTag("Loc1");
         // create the fragment and data the first time
         if (where == null) {
             Log.d("my", "onCreate() No saved state available");
             // add the fragment
             where = new SavedFragment();
-            fm.beginTransaction().add(where, "plats").commit();
+            fm.beginTransaction().add(where, "Loc1").commit();
             // load the data from the web
             where.setData(mStartPoint1);
-        }else
+            fm.executePendingTransactions();
+        } else {
             Log.d("my", "onCreate() Saved state available");
+            mStartPoint1 = where.getData();
+        }
 
-        mStartPoint1 = where.getData();
+        where = (SavedFragment) fm.findFragmentByTag("Loc2");
+        // create the fragment and data the first time
+        if (where == null) {
+            Log.d("my", "onCreate() No saved state available");
+            // add the fragment
+            where = new SavedFragment();
+            fm.beginTransaction().add(where, "Loc2").commit();
+            // load the data from the web
+            where.setData(mStartPoint2);
+            fm.executePendingTransactions();
+        } else {
+            Log.d("my", "onCreate() Saved state available");
+            mStartPoint2 = where.getData();
+        }
 
     }
 
@@ -151,70 +201,53 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     @Override
     public void onDestroy() {
         super.onDestroy();
-        // store the data in the fragment
-        where.setData(mStartPoint1);
-        Log.d("my", "onDestroy() Saved Start1");
+        compass.stop();
 
     }
 
-    /*
-    View.OnClickListener mStartListener = new OnClickListener() {
-
-        public void onClick(View v) {
-            if ( stopped ) {
-                mChronometer.setBase(SystemClock.elapsedRealtime());
-                mChronometer.start();
-                mChronometer.setTextColor(Color.GREEN);
-                stopped = false;
-            }else{
-                mChronometer.stop();
-                stopped = true;
-                mChronometer.setTextColor(Color.YELLOW);
-            }
-        }
-    };
-*/
-    @Override
-    public void onGpsStatusChanged(int event) {
-        upd++;
-        GpsStatus status = mLocationManager.getGpsStatus(null);
-        switch( event ){
-            case GpsStatus.GPS_EVENT_FIRST_FIX:
-                sats.setText(" GPS Status: First fix after" + status.getTimeToFirstFix()	);
-                break;
-            case GpsStatus.GPS_EVENT_SATELLITE_STATUS:
-                Iterable<GpsSatellite> list = new ArrayList<GpsSatellite>();
-                int count = 0;
-                list = status.getSatellites();
-                String gpses = "";
-                for ( GpsSatellite sat : list){
-                    if (sat.usedInFix())
-                        gpses += sat.getPrn() + ",";
-                    else
-                        gpses += "(" + sat.getPrn() + "),";
-                    count++;
-                }
-                sats.setText(  "" + count + " Sat's " + " upd: " + upd + " Pos N:" + mCurrentLocation.getLatitude() + " E:" + mCurrentLocation.getLongitude() );
-                break;
-            case GpsStatus.GPS_EVENT_STARTED:
-                sats.setText(" GPS Status: Started"	);
-                break;
-            case GpsStatus.GPS_EVENT_STOPPED:
-                sats.setText(" GPS Status: Stopped"	);
-                break;
-
-        }
-
-    }
     @Override
     protected void onResume() {
         super.onResume();
-     }
+        Log.d("my", "onResume");
+
+        compass.start();
+
+    }
+
 
     @Override
     protected void onPause() {
-        // TODO Auto-generated method stub
         super.onPause();
+
+        compass.stop();
+/*
+        FragmentManager fm = getFragmentManager();
+        where = (SavedFragment) fm.findFragmentByTag("Loc1");
+        if (where == null) {
+            Log.d("my", "onDestroy() No saved state available");
+            where = new SavedFragment();
+            fm.beginTransaction().add(where, "Loc1").commit();
+            where.setData(mStartPoint1);
+            fm.executePendingTransactions();
+        }else {
+            fm.beginTransaction().add(where, "Loc1").commit();
+            where.setData(mStartPoint1);
+            fm.executePendingTransactions();
+        }
+        where = (SavedFragment) fm.findFragmentByTag("Loc2");
+        if (where == null) {
+            Log.d("my", "onDestroy() No saved state available");
+            where = new SavedFragment();
+            fm.beginTransaction().add(where, "Loc2").commit();
+            where.setData(mStartPoint2);
+            fm.executePendingTransactions();
+        }else {
+            fm.beginTransaction().add(where, "Loc2").commit();
+            where.setData(mStartPoint2);
+            fm.executePendingTransactions();
+        }
+        Log.d("my", "onDestroy() Saved Positions");
+*/
     }
 
     @Override
@@ -242,7 +275,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     @Override
     public void onNmeaReceived(long timestamp, String str) {
         if (showNmea) {
-            if (nmeaLines > 10) {   // 200 is roughly the number of lines that fits the textfield
+            if (nmeaLines > 10) {   // 10 is roughly the number of lines that fits the textfield
                 nmea.setText(str);
                 nmeaLines = 1;
             } else {
@@ -254,14 +287,58 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     }
 
     @Override
+    public void onGpsStatusChanged(int event) {
+        upd++;
+        GpsStatus status = mLocationManager.getGpsStatus(null);
+
+        switch (event) {
+            case GpsStatus.GPS_EVENT_FIRST_FIX:
+                sats.setText(" GPS Status: First fix after" + status.getTimeToFirstFix());
+                fixed.setChecked(true);
+                fixed.setTextColor(Color.GREEN);
+                break;
+            case GpsStatus.GPS_EVENT_SATELLITE_STATUS:
+                Iterable<GpsSatellite> list = new ArrayList<GpsSatellite>();
+                int count = 0;
+                list = status.getSatellites();
+                String gpses = "";
+                for (GpsSatellite sat : list) {
+                    if (sat.usedInFix())
+                        gpses += sat.getPrn() + ",";
+                    else
+                        gpses += "(" + sat.getPrn() + "),";
+                    count++;
+                }
+                if (mCurrentLocation != null)
+                    sats.setText("" + count + " Sat's " + " upd: " + upd + " Pos N:" + mCurrentLocation.getLatitude() + " E:" + mCurrentLocation.getLongitude());
+                else
+                    sats.setText("" + count + " Sat's " + " upd: " + upd);
+                break;
+            case GpsStatus.GPS_EVENT_STARTED:
+                sats.setText(" GPS Status: Started");
+                break;
+            case GpsStatus.GPS_EVENT_STOPPED:
+                sats.setText(" GPS Status: Stopped");
+                break;
+
+        }
+
+    }
+
+    @Override
     public void onClick(View v) {
-//        Log.d("my", "onClick()");
+        Log.d("my", "onClick()");
         if(v ==  counter1){
             mStartPoint1 = mCurrentLocation;
-            counter1.setText("Waiting..");
+            counter1.setText("Wait..");
         }else if(v ==  counter2){
             mStartPoint2 = mCurrentLocation;
-            counter2.setText("Waiting..");
+            counter2.setText("Wait..");
+        } else if (v == rallytrip) {
+            mTripPosition = mCurrentLocation;
+            mTripDistance = 0.0f;
+            rallytrip.setText("Wait..");
+            Log.d("my", "onClick() rallytrip was clicked");
         }else if(v ==  nmea){
 //            Log.d("my", "onClick() showNmea was clicked");
             showNmea = !showNmea;
@@ -289,32 +366,44 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     }
     private void showupdate() {
+    /*
         counter1.setBackgroundColor(Color.BLACK);
+
         counter2.setBackgroundColor(Color.BLACK);
         counter1.setTextColor( Color.GRAY );
         counter2.setTextColor( Color.GRAY );
+     */
         if (mCurrentLocation != null){
+            float acc = mCurrentLocation.getAccuracy();
             if (mStartPoint1 != null && mCurrentLocation != null){
                 float dist = mStartPoint1.distanceTo(mCurrentLocation);
                 if (dist <= 6768000.0f) {
                     counter1.setText("" + String.format("%6.0f", dist));
-                    kurs1.setText(" "+mStartPoint1.bearingTo(mCurrentLocation));
+//                    kurs1.setText(" "+mStartPoint1.bearingTo(mCurrentLocation));
                 }else {
                     counter1.setText("--");
-                    kurs1.setText(" - ");
+//                    kurs1.setText(" - ");
                 }
             }
             if (mStartPoint2 != null && mCurrentLocation != null){
                 float dist = mStartPoint2.distanceTo(mCurrentLocation);
                 if (dist <= 6768000.0f) {
                     counter2.setText("" + String.format("%6.0f", dist));
-                    kurs2.setText(" "+mStartPoint1.bearingTo(mCurrentLocation));
+//                    kurs2.setText(" "+mStartPoint1.bearingTo(mCurrentLocation));
                 }else {
                     counter2.setText("--");
-                    kurs2.setText(" - ");
+//                    kurs2.setText(" - ");
                 }
             }
-            float acc = mCurrentLocation.getAccuracy();
+            if (mTripPosition != null && mCurrentLocation != null) {
+                float dist = mTripPosition.distanceTo(mCurrentLocation);
+                if (dist > 5.0) {
+                    mTripDistance += dist;
+                    mTripPosition = mCurrentLocation;
+                }
+                rallytrip.setText("" + String.format("%6.0f", mTripDistance));
+
+            }
             margin.setText("Nogrannhet: " + acc + "  Kurs: " + mCurrentLocation.getBearing() + "  Hast: " + mCurrentLocation.getSpeed() + " m/s");
             if ( acc < 10.0f){
                 counter1.setTextColor( Color.GREEN );
@@ -330,40 +419,86 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     }
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        // TODO Auto-generated method stub
         super.onRestoreInstanceState(savedInstanceState);
-        //mStartPoint1 = new Location("");
-        mStartPoint2 = new Location("");
-        //mStartPoint1.setLatitude(savedInstanceState.getDouble("StartLat1"));
-        //mStartPoint1.setLongitude(savedInstanceState.getDouble("StartLong1"));
-        mStartPoint2.setLatitude(savedInstanceState.getDouble("StartLat2"));
-        mStartPoint2.setLongitude(savedInstanceState.getDouble("StartLong2"));
- //       nmeat.setText(savedInstanceState.getString("message"));
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         // TODO Auto-generated method stub
-        super.onSaveInstanceState(outState);
-        if( outState != null){
-            if ( mStartPoint1 != null ){
-                outState.putDouble("StartLat1",mStartPoint1.getLatitude());
-                outState.putDouble("StartLong1",mStartPoint1.getLongitude());
-            }
-            if( mStartPoint2 != null ){
-                outState.putDouble("StartLat2",mStartPoint2.getLatitude());
-                outState.putDouble("StartLong2",mStartPoint2.getLatitude());
-            }
-            outState.putString("message","Reloaded");
-        }else {
-/*            try {
-                outputStream.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-*/
-        }
     }
 
 
+ /*   @Override
+    public void onSensorChanged(SensorEvent sensorEvent) {
+        // get the angle around the z-axis rotated
+        if (sensorEvent.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
+            if (sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+ //               Log.d("my", "ACCELEROMETER SENSOR_STATUS_UNRELIABLE");
+ //               return;
+            }
+            if (sensorEvent.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+//                Log.d("my", "MAGNETIC_FIELD SENSOR_STATUS_UNRELIABLE");
+ //               return;
+            }
+        }
+
+        if (sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
+            mGravity = sensorEvent.values.clone ();
+        if (sensorEvent.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)
+            mGeomagnetic =  sensorEvent.values.clone ();
+
+        if (mGravity == null )
+            Log.d("my", "No Gravity event");
+        if (mGeomagnetic == null )
+            Log.d("my", "No Magnetic event");
+
+        if (mGravity != null && mGeomagnetic != null) {
+
+            float[] rotationMatrixA = mRotationMatrixA;
+            if (SensorManager.getRotationMatrix(rotationMatrixA, null, mGravity, mGeomagnetic)) {
+
+                float[] rotationMatrixB = mRotationMatrixB;
+                SensorManager.remapCoordinateSystem(rotationMatrixA, SensorManager.AXIS_Y, SensorManager.AXIS_X, rotationMatrixB);
+                float[] dv = new float[3];
+                SensorManager.getOrientation(rotationMatrixB, dv);
+                // add to smoothing filter
+                headings.add(dv[0]);
+            }else {
+                Log.d("my", "getRotationMatrix failed");
+            }
+   //         compass.invalidate();
+        }else {
+            Log.d("my", "incomplete sensor data");
+        }
+//        float degree = mGeomagnetic[0];
+//        headings.add(degree);
+        float filtered = headings.getHeading();
+        tvHeading.setText("Kurs: " + Float.toString(filtered) + " º");
+
+        // create a rotation animation (reverse turn degree degrees)
+        RotateAnimation ra = new RotateAnimation(
+                filtered,
+                -filtered,
+                Animation.RELATIVE_TO_SELF, 0.5f,
+                Animation.RELATIVE_TO_SELF,
+                0.5f);
+
+        // how long the animation will take place
+        ra.setDuration(210);
+
+        // set the animation after the end of the reservation status
+        ra.setFillAfter(true);
+
+        // Start the animation
+//        compass.startAnimation(ra);
+        currentDegree = -filtered;
+
+
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
+    }
+    */
 }

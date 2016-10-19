@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_height="fill_parent"
+    android:layout_width="match_parent"
+    android:weightSum="1"
+    android:orientation="vertical"
+    android:keepScreenOn="true">
+    >
+
+
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/row"
+        android:layout_weight="0.05">
+
+        <TextClock
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/textClock"
+            android:textSize="40sp"
+            android:layout_weight="0.05" />
+
+        <Chronometer
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/chronometer"
+            android:textSize="40sp"
+            android:layout_weight="1" />
+
+    </TableRow>
+
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/row2"
+        android:layout_weight="0.05">
+
+        <Button
+            android:id="@+id/button1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.05"
+            android:text="@string/Start"
+            android:textSize="48sp"></Button>
+
+        <Button
+            android:id="@+id/Button01"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.05"
+            android:text="@string/Start"
+            android:textSize="48sp" />
+
+    </TableRow>
+
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.05"
+        android:id="@+id/rallytripvew">
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:layout_width="500dp"
+                android:layout_height="wrap_content"
+                android:text="@string/Start"
+                android:id="@+id/rallytrip"
+                android:textSize="48sp"
+                android:textAlignment="center"
+                android:textAllCaps="false" />
+
+            <CheckBox
+                android:text="GPS Fix"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:id="@+id/Fixed"
+                android:textAlignment="textEnd"
+                android:clickable="false" />
+
+        </TableRow>
+
+    </TableRow>
+
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/row3"
+        android:layout_weight="0.05">
+
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <ImageView
+                android:id="@+id/imageViewCompass"
+                android:src="@drawable/compass_rose2"
+                android:adjustViewBounds="false"
+                android:layout_column="0"
+                android:layout_width="125dp"
+                android:layout_height="125dp" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <TextView
+                    android:id="@+id/textView1"
+                    android:layout_width="434dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/distance"
+                    android:textAppearance="?android:attr/textAppearanceLarge"
+                    android:textSize="30sp"
+                    android:layout_column="1" />
+
+                <TextView
+                    android:id="@+id/tvHeading"
+                    android:layout_width="436dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/kurs"
+                    android:textAppearance="?android:attr/textAppearanceLarge"
+                    android:textSize="30sp"
+                    android:layout_column="1" />
+
+                <TextView
+                    android:text="TextView"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/textView2"
+                    android:textAppearance="?android:attr/textAppearanceLarge"
+                    android:layout_width="436dp">
+
+                </TextView>
+            </LinearLayout>
+
+        </GridLayout>
+
+    </TableRow>
+
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.05"
+        android:text="NMEA" />
+
+</LinearLayout>
